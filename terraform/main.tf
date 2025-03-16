@@ -1,10 +1,10 @@
-resource "random_pet" "rg_name" {
-  prefix = var.resource_group_name_prefix
-}
+# resource "random_pet" "rg_name" {
+#   prefix = var.resource_group_name_prefix
+# }
 
 resource "azurerm_resource_group" "rg" {
   location = var.resource_group_location
-  name     = random_pet.rg_name.id
+  name     = "unir-resource-group"
 }
 
 # Create virtual network
@@ -23,14 +23,6 @@ resource "azurerm_subnet" "unir_terraform_subnet" {
   address_prefixes     = ["10.0.1.0/24"]
 }
 
-# Create public IPs
-resource "azurerm_public_ip" "webapp_terraform_public_ip" {
-  name                = "webappPublicIP"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-  allocation_method   = "Dynamic"
-}
-
 # Create Network Security Group and rule
 resource "azurerm_network_security_group" "unir_terraform_nsg" {
   name                = "UnirNetworkSecurityGroup"
@@ -44,103 +36,33 @@ resource "azurerm_network_security_group" "unir_terraform_nsg" {
     access                     = "Allow"
     protocol                   = "Tcp"
     source_port_range          = "*"
-    destination_port_range     = "22"
+    destination_port_range     = "*"
     source_address_prefix      = "*"
     destination_address_prefix = "*"
   }
 }
 
-# Create network interface
-resource "azurerm_network_interface" "webapp_terraform_nic" {
-  name                = "webappNIC"
-  location            = azurerm_resource_group.rg.location
-  resource_group_name = azurerm_resource_group.rg.name
-
-  ip_configuration {
-    name                          = "webapp_nic_configuration"
-    subnet_id                     = azurerm_subnet.unir_terraform_subnet.id
-    private_ip_address_allocation = "Dynamic"
-    public_ip_address_id          = azurerm_public_ip.webapp_terraform_public_ip.id
-  }
-}
-
-# Connect the security group to the network interface
-resource "azurerm_network_interface_security_group_association" "webapp_unir_terraform_network" {
-  network_interface_id      = azurerm_network_interface.webapp_terraform_nic.id
-  network_security_group_id = azurerm_network_security_group.unir_terraform_nsg.id
-}
-
-# Generate random text for a unique storage account name
-resource "random_id" "random_id" {
-  keepers = {
-    # Generate a new ID only when a new resource group is defined
-    resource_group = azurerm_resource_group.rg.name
-  }
-
-  byte_length = 8
-}
-
 # Create storage account for boot diagnostics
 resource "azurerm_storage_account" "unir_storage_account" {
-  name                     = "diag${random_id.random_id.hex}"
+  name                     = "unirstorageaccount"
   location                 = azurerm_resource_group.rg.location
   resource_group_name      = azurerm_resource_group.rg.name
   account_tier             = "Standard"
   account_replication_type = "LRS"
 }
 
-# Create virtual machine
-resource "azurerm_linux_virtual_machine" "webapp_terraform_vm" {
-  name                  = "unir01_webapp"
-  location              = azurerm_resource_group.rg.location
-  resource_group_name   = azurerm_resource_group.rg.name
-  network_interface_ids = [azurerm_network_interface.webapp_terraform_nic.id]
-  size                  = "Standard_DS1_v2"
-
-  os_disk {
-    name                 = "webappOsDisk"
-    caching              = "ReadWrite"
-    storage_account_type = "Premium_LRS"
-  }
-
-  source_image_reference {
-    publisher = "Canonical"
-    offer     = "0001-com-ubuntu-server-jammy"
-    sku       = "22_04-lts-gen2"
-    version   = "latest"
-  }
-
-  computer_name  = "webapp"
-  admin_username = var.username
-
-  admin_ssh_key {
-    username   = var.username
-    public_key = azapi_resource_action.ssh_public_key_gen.output.publicKey
-  }
-
-  boot_diagnostics {
-    storage_account_uri = azurerm_storage_account.unir_storage_account.primary_blob_endpoint
-  }
+module "vm" {
+  source = "./modules/vm"
+  username = "programador7"
+  resource_group_name = azurerm_resource_group.rg.name
+  resource_group_location = azurerm_resource_group.rg.location
+  unir_terraform_subnet = azurerm_subnet.unir_terraform_subnet.id
+  network_security_group = azurerm_network_security_group.unir_terraform_nsg.id
+  unir_storage_account = azurerm_storage_account.unir_storage_account.primary_blob_endpoint
 }
 
-#create cluster aks
-resource "azurerm_kubernetes_cluster" "example" {
-  name                = "unir-aks-webapp"
-  location            = azurerm_resource_group.rg.location
+module "aks" {
+  source = "./modules/cluster"
   resource_group_name = azurerm_resource_group.rg.name
-  dns_prefix          = "unirakswebapp"
-
-  default_node_pool {
-    name       = "default"
-    node_count = 1
-    vm_size    = "Standard_D2_v2"
-  }
-
-  identity {
-    type = "SystemAssigned"
-  }
-
-  tags = {
-    Environment = "Production"
-  }
+  resource_group_location = azurerm_resource_group.rg.location  
 }
