@@ -1,0 +1,24 @@
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  # become: true
+  vars:
+    cluster: unir-aks1
+  vars_files:
+    - ../env_vars.yaml
+  tasks:
+    - name: Hace un apply de los archivos en el cluster
+      kubernetes.core.k8s:
+        context: "{{ cluster }}"
+        namespace: default
+        src: "./azure-vote-front/{{ item.name }}"
+        state: present
+        apply: yes
+      loop:  
+        - name: azure-vote-back-deployment.yaml
+        - name: azure-vote-back-service.yaml
+        - name: data-persistentvolumeclaim.yaml
+        - name: azure-vote-front-deployment.yaml
+        - name: azure-vote-front-service.yaml
+
+    

@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: azure-vote-front
+  name: azure-vote-front
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: azure-vote-front
+  template:
+    metadata:
+      labels:
+        app: azure-vote-front
+    spec:
+      containers:
+        - env:
+            - name: REDIS
+              value: azure-vote-back
+          image: unirjreyesacr.azurecr.io/azure-vote-front:casopractico2
+          name: azure-vote-front
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+              protocol: TCP
+      restartPolicy: Always

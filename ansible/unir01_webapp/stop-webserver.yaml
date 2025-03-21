@@ -1,0 +1,8 @@
+- name: "Playbook to delete a container"
+  hosts: unir01_webapp
+  gather_facts: true
+  tasks:
+    - name: "Detiene el contenedor y lo remueve de podman"
+      containers.podman.podman_container:
+        name: unir
+        state: absent

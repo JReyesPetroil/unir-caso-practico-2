@@ -1,0 +1,42 @@
+- hosts: localhost
+  connection: local
+  gather_facts: false
+  # become: true
+  vars_files:
+    - ../env_vars.yaml
+  tasks:
+    - name: pull images a podman
+      containers.podman.podman_image:
+        name: "{{ item.name }}"
+        arch: amd64
+        state: present
+      loop:  
+        - name: docker.io/bitnami/redis
+        - name: docker.io/suhuruli/azure-vote-front
+        - name: docker.io/library/httpd
+
+    - name: realizar el tag a las imagenes para el registry de azure
+      containers.podman.podman_tag:
+        image: "{{ item.name }}"
+        target_names:
+          - "{{ ACR }}/{{ item.name }}:casopractico2"
+      loop:
+        - name: redis
+        - name: httpd
+        - name: azure-vote-front
+
+    - name: "podman login"
+      containers.podman.podman_login:
+        username: "{{ ACR_USER   }}"
+        password: "{{ ACR_PASS   }}"
+        registry: "{{ ACR   }}"
+    
+    - name: subir las imagenes al repositorio de Azure
+      containers.podman.podman_image:
+        name: "{{ ACR }}/{{ item.name }}"
+        tag: casopractico2
+        push: true
+      loop:
+        - name: redis
+        - name: httpd
+        - name: azure-vote-front

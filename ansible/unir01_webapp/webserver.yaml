@@ -1,0 +1,32 @@
+- name: "Playbook to create httpd container"
+  hosts: unir01_webapp
+  gather_facts: yes
+  vars_files:
+    - ../env_files.yaml
+  tasks:   
+    - name: "Allow the nginx container to run in the 80 port of the host"
+      become: true
+      become_user: root
+      become_method: sudo
+      ansible.posix.sysctl:
+        name: net.ipv4.ip_unprivileged_port_start
+        value: "80"
+        sysctl_set: true
+        reload: true
+        
+    - name: "Create the unir container"
+      containers.podman.podman_login:
+        username: "{{ ACR_USER   }}"
+        password: "{{ ACR_PASS   }}"
+        registry: "{{ ACR   }}"
+    
+    - name: "Create the unir container"
+      containers.podman.podman_container:
+        name: unir
+        hostname: unir.petroil.dev
+        image: "{{ ACR }}/httpd:casopractico2"
+        restart: true
+        publish: 80:80
+        volume:
+          - "{{ homedir }}/unir:/usr/local/apache2/htdocs:Z"
+        state: started
