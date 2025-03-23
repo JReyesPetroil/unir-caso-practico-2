@@ -5,15 +5,22 @@
   vars_files:
     - ../env_vars.yaml
   tasks:
-    - name: pull images a podman
+    # - name: pull images a podman
+    #   containers.podman.podman_image:
+    #     name: "{{ item.name }}"
+    #     arch: amd64
+    #     state: present
+    #   loop:  
+    #     - name: docker.io/bitnami/redis
+    #     - name: docker.io/suhuruli/azure-vote-front
+
+    - name: Build a Docker formatted image
       containers.podman.podman_image:
-        name: "{{ item.name }}"
+        name: httpd:latest
+        path: .deployment
         arch: amd64
-        state: present
-      loop:  
-        - name: docker.io/bitnami/redis
-        - name: docker.io/suhuruli/azure-vote-front
-        - name: docker.io/library/httpd
+        build:
+          format: docker
 
     - name: realizar el tag a las imagenes para el registry de azure
       containers.podman.podman_tag:
@@ -21,9 +28,9 @@
         target_names:
           - "{{ ACR }}/{{ item.name }}:casopractico2"
       loop:
-        - name: redis
+        # - name: redis
+        # - name: azure-vote-front
         - name: httpd
-        - name: azure-vote-front
 
     - name: "podman login"
       containers.podman.podman_login:
@@ -37,6 +44,6 @@
         tag: casopractico2
         push: true
       loop:
-        - name: redis
+        # - name: redis
         - name: httpd
-        - name: azure-vote-front
+        # - name: azure-vote-front

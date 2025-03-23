@@ -1,15 +1,15 @@
 ---
 - name: "Playbook to create the prerequisites"
-  hosts: localhost
+  hosts: unir01_webapp
   gather_facts: false
   vars_files:
-    - ../env_files.yaml
+    - ../env_vars.yaml
   tasks:
     - name: "crear www files"
       ansible.builtin.file:
         path: "{{ HOME_DIR }}/unir"
         state: directory        
-
+    
     - name: "Create the httpd unir file"
       ansible.builtin.copy:
         dest: "{{ HOME_DIR }}/unir/index.html"

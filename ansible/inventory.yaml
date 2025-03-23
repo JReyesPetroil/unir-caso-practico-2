@@ -1,7 +1,7 @@
 linux:
   hosts:
     unir01_webapp:
-      ansible_host: 52.234.135.62
+      ansible_host: 40.114.12.65
       host_key_checking: False
   vars:
     ansible_user: programador7
